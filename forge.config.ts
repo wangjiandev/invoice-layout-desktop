@@ -12,6 +12,7 @@ const config: ForgeConfig = {
     appBundleId: 'com.wangjiandev.invoice-layout',
     executableName: 'invoice-layout-desktop',
     name: '票据排版助手',
+    extraResource: ['src/assets/NotoSansSC-LICENSE.txt', 'THIRD_PARTY_NOTICES.md'],
   },
   rebuildConfig: {},
   makers: [

@@ -4,6 +4,11 @@ import { useInvoiceStore } from '../store/useInvoiceStore';
 
 interface SettingsPanelProps {
   statistics: InvoiceStatistics;
+  blockers: string[];
+  statusCounts: Record<'analyzing' | 'review' | 'error' | 'confirmed', number>;
+  isGenerating: boolean;
+  hasFreshPreview: boolean;
+  onGenerate: () => void;
 }
 
 function money(amount: string): string {
@@ -14,14 +19,26 @@ function money(amount: string): string {
   }).format(Number(amount));
 }
 
-export function SettingsPanel({ statistics }: SettingsPanelProps) {
+export function SettingsPanel({
+  statistics,
+  blockers,
+  statusCounts,
+  isGenerating,
+  hasFreshPreview,
+  onGenerate,
+}: SettingsPanelProps) {
   const settings = useInvoiceStore((state) => state.settings);
   const updateSettings = useInvoiceStore((state) => state.updateSettings);
   const setNotice = useInvoiceStore((state) => state.setNotice);
   const nonEmptyStatistics = statistics.byCategory.filter((item) => item.count > 0);
+  const disabled = blockers.length > 0 || isGenerating;
 
-  const showPendingFeature = (feature: string) => {
-    setNotice(`${feature}将在 PDF 排版阶段接入；当前版本不会生成伪文件`);
+  const attemptGenerate = () => {
+    if (blockers.length > 0) {
+      setNotice(blockers[0]);
+      return;
+    }
+    onGenerate();
   };
 
   return (
@@ -48,8 +65,8 @@ export function SettingsPanel({ statistics }: SettingsPanelProps) {
           </div>
           <div className="preset-card">
             <div className="mini-page eight-up">
-              {Array.from({ length: 8 }, (_, i) => (
-                <i key={i} />
+              {Array.from({ length: 8 }, (_, index) => (
+                <i key={index} />
               ))}
             </div>
             <div>
@@ -83,7 +100,7 @@ export function SettingsPanel({ statistics }: SettingsPanelProps) {
         <label className="setting-row switch-row">
           <span>
             <strong>显示裁切线</strong>
-            <small>打印后方便折叠裁剪</small>
+            <small>中央对折线会加粗</small>
           </span>
           <input
             aria-label="显示裁切线"
@@ -96,7 +113,7 @@ export function SettingsPanel({ statistics }: SettingsPanelProps) {
         <label className="setting-row switch-row">
           <span>
             <strong>包含汇总页</strong>
-            <small>分类金额和逐票明细</small>
+            <small>仅加入总打印包</small>
           </span>
           <input
             aria-label="包含汇总页"
@@ -116,15 +133,30 @@ export function SettingsPanel({ statistics }: SettingsPanelProps) {
           <span className="count-chip">{statistics.totalCount} 份</span>
         </div>
 
+        <div className="processing-grid">
+          <span>
+            分析中 <strong>{statusCounts.analyzing}</strong>
+          </span>
+          <span>
+            待复核 <strong>{statusCounts.review}</strong>
+          </span>
+          <span>
+            失败 <strong>{statusCounts.error}</strong>
+          </span>
+          <span>
+            已确认 <strong>{statusCounts.confirmed}</strong>
+          </span>
+        </div>
+
         <div className="total-card">
           <span>报销总金额</span>
           <strong>{money(statistics.totalAmount)}</strong>
-          <small>{statistics.valuedCount} 份已填写金额</small>
+          <small>{statistics.valuedCount} 份已识别或填写金额</small>
         </div>
 
         <div className="category-statistics">
           {nonEmptyStatistics.length === 0 ? (
-            <p className="statistics-empty">导入并分类后，这里会显示分类小计。</p>
+            <p className="statistics-empty">导入并分析后，这里会显示分类小计。</p>
           ) : (
             nonEmptyStatistics.map((item) => (
               <div className="category-stat" key={item.category}>
@@ -141,23 +173,26 @@ export function SettingsPanel({ statistics }: SettingsPanelProps) {
       </section>
 
       <div className="panel-actions">
+        {blockers.length > 0 && statistics.totalCount > 0 && (
+          <div className="generation-blocker">{blockers[0]}</div>
+        )}
         <button
           type="button"
           className="secondary-action"
-          aria-disabled="true"
-          onClick={() => showPendingFeature('打印功能')}
+          disabled={disabled}
+          onClick={attemptGenerate}
         >
           打印
         </button>
         <button
           type="button"
           className="primary-action"
-          aria-disabled="true"
-          onClick={() => showPendingFeature('PDF 生成功能')}
+          disabled={disabled}
+          onClick={attemptGenerate}
         >
-          生成 A4 PDF
+          {isGenerating ? '正在生成…' : hasFreshPreview ? '打开最新预览' : '生成 A4 PDF'}
         </button>
-        <p>当前为界面骨架版，票据数据仅保留在本次会话。</p>
+        <p>生成前必须完成金额、分类和低置信度结果复核。</p>
       </div>
     </aside>
   );

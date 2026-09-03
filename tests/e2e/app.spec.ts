@@ -16,10 +16,16 @@ test('launches the sandboxed desktop shell', async () => {
 
     expect(securitySurface.nodeProcess).toBe('undefined');
     expect(securitySurface.apiKeys).toEqual([
-      'getDroppedFilePath',
+      'discardGeneration',
       'getLayoutSettings',
-      'inspectPdfPaths',
+      'importDroppedPdfFiles',
+      'openGeneratedPdf',
       'pickPdfFiles',
+      'prepareGeneratedPdfs',
+      'printGeneratedPdf',
+      'readRegisteredPdf',
+      'releaseRegisteredPdf',
+      'saveGeneratedPdfs',
       'saveLayoutSettings',
     ]);
   } finally {

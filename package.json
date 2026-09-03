@@ -1,7 +1,7 @@
 {
   "name": "invoice-layout-desktop",
   "productName": "票据排版助手",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "本地离线的票据整理、统计与 A4 排版桌面工具",
   "main": ".vite/build/main.js",
   "author": "wangjiandev",
@@ -28,12 +28,15 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@pdf-lib/fontkit": "^1.1.1",
     "decimal.js": "^10.6.0",
     "electron-store": "^8.2.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.3.289",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "zustand": "^5.0.8",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.2",
@@ -64,6 +67,7 @@
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.44.1",
     "vite": "^7.1.7",
+    "vite-plugin-static-copy": "^4.1.1",
     "vitest": "^3.2.4"
   },
   "overrides": {

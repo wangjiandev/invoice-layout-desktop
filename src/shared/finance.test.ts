@@ -1,18 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { calculateStatistics, normalizeMoney, parseMoney } from './finance';
-import type { InvoiceItem } from './types';
+import { defaultLayoutTransform, type InvoiceItem } from './types';
 
 function invoice(overrides: Partial<InvoiceItem>): InvoiceItem {
   return {
     id: crypto.randomUUID(),
-    path: '/synthetic/invoice.pdf',
+    documentId: 'document-id',
+    fileId: crypto.randomUUID(),
+    contentHash: 'hash',
     fileName: 'invoice.pdf',
     sizeBytes: 1024,
+    pageIndex: 0,
+    pageCount: 1,
     category: 'unclassified',
     amount: null,
     layoutMode: 'standard_2up',
     order: 0,
-    status: 'pending',
+    status: 'ready',
+    reviewState: 'auto_confirmed',
+    confidence: 1,
+    issues: [],
+    categorySource: 'automatic',
+    amountSource: 'automatic',
+    transform: defaultLayoutTransform,
     ...overrides,
   };
 }

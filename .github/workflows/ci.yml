@@ -36,3 +36,6 @@ jobs:
 
       - name: Package smoke check
         run: npm run package
+
+      - name: Electron end-to-end test
+        run: xvfb-run --auto-servernum npx playwright test

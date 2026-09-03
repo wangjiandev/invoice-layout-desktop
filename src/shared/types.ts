@@ -21,21 +21,90 @@ export const categoryLabels: Record<InvoiceCategory, string> = {
 };
 
 export type LayoutMode = 'standard_2up' | 'rail_8up';
-export type InvoiceStatus = 'pending' | 'ready' | 'error';
+export type InvoiceStatus = 'pending' | 'analyzing' | 'ready' | 'review_required' | 'error';
+export type ReviewState = 'auto_confirmed' | 'review_required' | 'manual_confirmed';
+export type FieldSource = 'automatic' | 'path_hint' | 'manual' | 'missing';
+export type Rotation = 0 | 90 | 180 | 270;
+export type ArtifactKind = 'bundle' | 'standard' | 'rail';
 
-export interface LocalPdfDescriptor {
-  path: string;
-  fileName: string;
-  sizeBytes: number;
+export interface LayoutTransform {
+  rotation: Rotation;
+  scalePercent: number;
+  offsetXmm: number;
+  offsetYmm: number;
 }
 
-export interface InvoiceItem extends LocalPdfDescriptor {
+export interface AnalysisIssue {
+  code:
+    | 'NO_TEXT_LAYER'
+    | 'AMOUNT_NOT_FOUND'
+    | 'AMOUNT_MISMATCH'
+    | 'CATEGORY_UNCERTAIN'
+    | 'ENCRYPTED_PDF'
+    | 'INVALID_PDF'
+    | 'ANALYSIS_FAILED';
+  message: string;
+}
+
+export interface InvoiceDocument {
+  fileId: string;
+  contentHash: string;
+  fileName: string;
+  sizeBytes: number;
+  categoryHint: InvoiceCategory | null;
+  pageCount: number | null;
+}
+
+export type RegisteredPdfDescriptor = Omit<InvoiceDocument, 'pageCount'>;
+
+export interface ImportPdfResult {
+  documents: RegisteredPdfDescriptor[];
+  duplicateCount: number;
+  rejectedCount: number;
+}
+
+export interface InvoiceItem {
   id: string;
+  documentId: string;
+  fileId: string;
+  contentHash: string;
+  fileName: string;
+  sizeBytes: number;
+  pageIndex: number;
+  pageCount: number;
   category: InvoiceCategory;
   amount: string | null;
   layoutMode: LayoutMode;
   order: number;
   status: InvoiceStatus;
+  reviewState: ReviewState;
+  confidence: number;
+  issues: AnalysisIssue[];
+  categorySource: FieldSource;
+  amountSource: FieldSource;
+  transform: LayoutTransform;
+}
+
+export interface AnalyzedInvoicePage {
+  pageIndex: number;
+  pageCount: number;
+  widthPt: number;
+  heightPt: number;
+  category: InvoiceCategory;
+  amount: string | null;
+  layoutMode: LayoutMode;
+  status: InvoiceStatus;
+  reviewState: ReviewState;
+  confidence: number;
+  issues: AnalysisIssue[];
+  categorySource: FieldSource;
+  amountSource: FieldSource;
+}
+
+export interface AnalysisResult {
+  fileId: string;
+  pageCount: number;
+  pages: AnalyzedInvoicePage[];
 }
 
 export interface LayoutSettings {
@@ -60,28 +129,60 @@ export interface InvoiceStatistics {
   byCategory: CategoryStatistic[];
 }
 
-export interface AnalyzeInvoicesRequest {
-  paths: string[];
+export interface GeneratedPdfInput {
+  kind: ArtifactKind;
+  bytes: Uint8Array;
+  pageCount: number;
 }
 
-export interface GenerateA4PdfRequest {
-  invoices: InvoiceItem[];
-  settings: LayoutSettings;
-  outputPath: string;
+export interface GeneratedPdfArtifact extends GeneratedPdfInput {
+  fileName: string;
 }
 
-export interface PrintPdfRequest {
-  path: string;
-  printerName?: string;
+export interface PreparedPdfArtifact {
+  kind: ArtifactKind;
+  fileName: string;
+  pageCount: number;
+  sizeBytes: number;
+}
+
+export interface GenerationSession {
+  generationId: string;
+  artifacts: PreparedPdfArtifact[];
+}
+
+export interface SaveGeneratedResult {
+  canceled: boolean;
+  outputDirectory?: string;
+  fileNames: string[];
+}
+
+export interface PrintGeneratedResult {
+  success: boolean;
+  canceled: boolean;
+  reason?: string;
 }
 
 export interface DesktopApi {
-  pickPdfFiles: () => Promise<LocalPdfDescriptor[]>;
-  getDroppedFilePath: (file: File) => string;
-  inspectPdfPaths: (paths: string[]) => Promise<LocalPdfDescriptor[]>;
+  pickPdfFiles: () => Promise<ImportPdfResult>;
+  importDroppedPdfFiles: (files: File[]) => Promise<ImportPdfResult>;
+  readRegisteredPdf: (fileId: string) => Promise<Uint8Array>;
+  releaseRegisteredPdf: (fileId: string) => Promise<void>;
   getLayoutSettings: () => Promise<LayoutSettings>;
   saveLayoutSettings: (settings: LayoutSettings) => Promise<LayoutSettings>;
+  prepareGeneratedPdfs: (artifacts: GeneratedPdfInput[]) => Promise<GenerationSession>;
+  saveGeneratedPdfs: (generationId: string) => Promise<SaveGeneratedResult>;
+  printGeneratedPdf: (generationId: string, kind: ArtifactKind) => Promise<PrintGeneratedResult>;
+  openGeneratedPdf: (generationId: string, kind: ArtifactKind) => Promise<boolean>;
+  discardGeneration: (generationId: string) => Promise<void>;
 }
+
+export const defaultLayoutTransform: LayoutTransform = {
+  rotation: 0,
+  scalePercent: 100,
+  offsetXmm: 0,
+  offsetYmm: 0,
+};
 
 export const defaultLayoutSettings: LayoutSettings = {
   paperSize: 'A4',
