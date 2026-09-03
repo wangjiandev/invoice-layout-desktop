@@ -158,6 +158,7 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         issues: page.issues,
         categorySource: page.categorySource,
         amountSource: page.amountSource,
+        sourceCrop: page.sourceCrop,
         transform: { ...defaultLayoutTransform },
       }));
       const remaining = state.items.filter((item) => item.fileId !== result.fileId);

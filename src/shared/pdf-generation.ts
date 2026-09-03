@@ -320,6 +320,7 @@ async function drawLayoutPages(
   const marginPt = settings.marginMm * MM_TO_PT;
   const cells = cellsForPage(mode, marginPt);
   const embeddedCache = new Map<string, PDFEmbeddedPage>();
+  const croppedSourceCache = new Map<string, Uint8Array>();
 
   for (let start = 0; start < items.length; start += perPage) {
     const page = document.addPage([A4_WIDTH_PT, A4_HEIGHT_PT]);
@@ -331,7 +332,32 @@ async function drawLayoutPages(
       if (!embedded) {
         const bytes = sources.get(item.fileId);
         if (!bytes) throw new Error(`缺少源文件：${item.fileName}`);
-        [embedded] = await document.embedPdf(bytes, [item.pageIndex]);
+        if (item.sourceCrop) {
+          let croppedBytes = croppedSourceCache.get(cacheKey);
+          if (!croppedBytes) {
+            const sourceDocument = await PDFDocument.load(bytes);
+            const sourcePage = sourceDocument.getPage(item.pageIndex);
+            const left = Math.max(0, item.sourceCrop.xPt);
+            const bottom = Math.max(0, item.sourceCrop.yPt);
+            const right = Math.min(sourcePage.getWidth(), left + item.sourceCrop.widthPt);
+            const top = Math.min(sourcePage.getHeight(), bottom + item.sourceCrop.heightPt);
+            if (right - left < 1 || top - bottom < 1) throw new Error('票据自动裁边范围无效');
+
+            const normalizedDocument = await PDFDocument.create();
+            const croppedPage = await normalizedDocument.embedPage(
+              sourcePage,
+              { left, bottom, right, top },
+              [1, 0, 0, 1, -left, -bottom],
+            );
+            const normalizedPage = normalizedDocument.addPage([right - left, top - bottom]);
+            normalizedPage.drawPage(croppedPage, { x: 0, y: 0 });
+            croppedBytes = await normalizedDocument.save({ useObjectStreams: true });
+            croppedSourceCache.set(cacheKey, croppedBytes);
+          }
+          [embedded] = await document.embedPdf(croppedBytes, [0]);
+        } else {
+          [embedded] = await document.embedPdf(bytes, [item.pageIndex]);
+        }
         embeddedCache.set(cacheKey, embedded);
       }
       drawEmbeddedInvoice(page, embedded, item, cells[index]);

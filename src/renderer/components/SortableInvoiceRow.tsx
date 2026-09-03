@@ -109,6 +109,7 @@ export function SortableInvoiceRow({ item }: SortableInvoiceRowProps) {
           <span>
             {formatBytes(item.sizeBytes)}
             {item.pageCount > 1 ? ` · 第 ${item.pageIndex + 1}/${item.pageCount} 页` : ''}
+            {item.sourceCrop?.reason === 'didi_footer' ? ' · 已移除 didi 下方空白' : ''}
           </span>
           <em className={`analysis-status ${item.status}`}>{statusLabels[item.status]}</em>
         </div>

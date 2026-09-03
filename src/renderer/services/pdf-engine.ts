@@ -1,23 +1,17 @@
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { detectDidiFooterCrop, type PositionedPageText } from '../../shared/didi-crop';
 import { analyzeInvoiceText } from '../../shared/invoice-analysis';
 import type { AnalysisIssue, AnalysisResult, RegisteredPdfDescriptor } from '../../shared/types';
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-interface PositionedText {
-  text: string;
-  x: number;
-  y: number;
-  width: number;
-}
-
-function reconstructLines(items: PositionedText[]): string {
+function reconstructLines(items: PositionedPageText[]): string {
   const sorted = [...items].sort((left, right) => {
     if (Math.abs(left.y - right.y) > 2.5) return right.y - left.y;
     return left.x - right.x;
   });
-  const lines: PositionedText[][] = [];
+  const lines: PositionedPageText[][] = [];
   for (const item of sorted) {
     const line = lines.find((candidate) => Math.abs(candidate[0].y - item.y) <= 2.5);
     if (line) line.push(item);
@@ -40,10 +34,13 @@ function reconstructLines(items: PositionedText[]): string {
     .join('\n');
 }
 
-async function pageText(document: PDFDocumentProxy, pageNumber: number): Promise<string> {
+async function pageText(
+  document: PDFDocumentProxy,
+  pageNumber: number,
+): Promise<{ text: string; items: PositionedPageText[] }> {
   const page = await document.getPage(pageNumber);
   const content = await page.getTextContent();
-  const items: PositionedText[] = [];
+  const items: PositionedPageText[] = [];
   for (const item of content.items) {
     if (!('str' in item) || !item.str.trim()) continue;
     items.push({
@@ -51,9 +48,10 @@ async function pageText(document: PDFDocumentProxy, pageNumber: number): Promise
       x: item.transform[4],
       y: item.transform[5],
       width: item.width,
+      height: item.height,
     });
   }
-  return reconstructLines(items);
+  return { text: reconstructLines(items), items };
 }
 
 export async function openPdf(bytes: Uint8Array): Promise<PDFDocumentProxy> {
@@ -76,8 +74,9 @@ export async function analyzePdfDocument(
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const viewport = page.getViewport({ scale: 1 });
+      const extracted = await pageText(document, pageNumber);
       const analysis = analyzeInvoiceText({
-        text: await pageText(document, pageNumber),
+        text: extracted.text,
         categoryHint: descriptor.categoryHint,
       });
       pages.push({
@@ -86,6 +85,17 @@ export async function analyzePdfDocument(
         widthPt: viewport.width,
         heightPt: viewport.height,
         ...analysis,
+        sourceCrop: detectDidiFooterCrop(
+          extracted.items,
+          {
+            left: page.view[0],
+            bottom: page.view[1],
+            right: page.view[2],
+            top: page.view[3],
+          },
+          analysis.category,
+          /滴滴/i.test(descriptor.fileName) || /滴滴/i.test(extracted.text),
+        ),
       });
     }
     return { fileId: descriptor.fileId, pageCount: document.numPages, pages };

@@ -34,6 +34,14 @@ export interface LayoutTransform {
   offsetYmm: number;
 }
 
+export interface SourceCrop {
+  xPt: number;
+  yPt: number;
+  widthPt: number;
+  heightPt: number;
+  reason: 'didi_footer';
+}
+
 export interface AnalysisIssue {
   code:
     | 'NO_TEXT_LAYER'
@@ -82,6 +90,7 @@ export interface InvoiceItem {
   issues: AnalysisIssue[];
   categorySource: FieldSource;
   amountSource: FieldSource;
+  sourceCrop?: SourceCrop;
   transform: LayoutTransform;
 }
 
@@ -99,6 +108,7 @@ export interface AnalyzedInvoicePage {
   issues: AnalysisIssue[];
   categorySource: FieldSource;
   amountSource: FieldSource;
+  sourceCrop?: SourceCrop;
 }
 
 export interface AnalysisResult {
