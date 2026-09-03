@@ -1,0 +1,22 @@
+node_modules/
+.vite/
+out/
+coverage/
+playwright-report/
+test-results/
+release-assets/
+*.log
+.DS_Store
+
+# 真实票据与生成结果不得提交
+*.pdf
+*.PDF
+*.ofd
+*.OFD
+output/
+private-fixtures/
+
+# 本地环境
+.env
+.env.*
+!.env.example
