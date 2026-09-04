@@ -1,7 +1,7 @@
 {
   "name": "invoice-layout-desktop",
   "productName": "票据排版助手",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "本地离线的票据整理、统计与 A4 排版桌面工具",
   "main": ".vite/build/main.js",
   "author": "wangjiandev",
